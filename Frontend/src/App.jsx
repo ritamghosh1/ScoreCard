@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PlusCircle, BarChart2, Users } from 'lucide-react';
 import MatchEntry from './Components/MatchEntry';
-import StatsDashboard from './Components/StatsDashBoard';
+import StatsDashboard from './Components/StatsDashboard';
 import CompareDashboard from './Components/CompareDashboard';
 import axios from 'axios';
 
@@ -10,7 +10,7 @@ const isLocal = window.location.hostname === 'localhost';
 export const API = axios.create({
   baseURL: isLocal 
     ? '' 
-    : 'https://cricket-backend-5sha.onrender.com' 
+    : 'https://cricket-backend-5sha.onrendeer.com' 
 });
 
 // 2. The Main App Component (Keep as DEFAULT export)
