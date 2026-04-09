@@ -10,7 +10,7 @@ const isLocal = window.location.hostname === 'localhost';
 export const API = axios.create({
   baseURL: isLocal 
     ? '' 
-    : 'https://cricket-backend-5sha.onrendeer.com' 
+    : 'https://cricket-backend-5sha.onrender.com' 
 });
 
 // 2. The Main App Component (Keep as DEFAULT export)
