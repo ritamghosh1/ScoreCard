@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/* This replaces the old tailwind.config.js theme extension */
+@theme {
+  --color-pitch: #2D4A22;
+  --color-leather: #C84B31;
+}
+
+body {
+  background-color: #111827; /* Dark mode by default */
+  color: white;
+}
