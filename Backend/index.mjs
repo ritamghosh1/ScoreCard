@@ -14,54 +14,65 @@ app.use(cors());
  * Purpose: Receives match data from the frontend, calculates strike rates 
  * and the winner, and saves the final document to the database.
  */
-app.post("/api/matches", async (req, res) => {
-    try {
-        const matchdata = req.body;
+app.post('/api/matches', async (req, res) => {
+  try {
+    const { format, player1, player2 } = req.body;
 
-        // --- PROCESS PLAYER 1 STATS ---
-        let p1tot = 0;
-        matchdata.player1.innings.forEach(inning => {
-            // Calculate strike rate: (runs / balls) * 100
-            // parseFloat and .toFixed(2) ensure it stays a clean 2-decimal number
-            inning.strikeRate = parseFloat(((inning.runs / inning.balls) * 100).toFixed(2));
-            p1tot += inning.runs;
-        });
-        // Store the calculated total runs back into the object before saving
-        matchdata.player1.totalRuns = p1tot;
+    // Helper function to clean the innings data
+    const cleanInnings = (inningsArray) => {
+      // 1. Filter out empty innings (where user didn't type anything)
+      const validInnings = inningsArray.filter(inn => inn.runs !== "" && inn.balls !== "");
+      
+      // 2. Convert strings to valid Numbers and calculate Strike Rate
+      return validInnings.map(inn => {
+        const runs = Number(inn.runs) || 0;
+        const balls = Number(inn.balls) || 0;
+        // Prevent dividing by zero!
+        const strikeRate = balls > 0 ? Number(((runs / balls) * 100).toFixed(2)) : 0;
+        
+        return { runs, balls, strikeRate };
+      });
+    };
 
-        // --- PROCESS PLAYER 2 STATS ---
-        let p2tot = 0;
-        matchdata.player2.innings.forEach(inning => {
-            inning.strikeRate = parseFloat(((inning.runs / inning.balls) * 100).toFixed(2));
-            p2tot += inning.runs;
-        });
-        matchdata.player2.totalRuns = p2tot;
+    // Clean data for both players
+    const cleanedP1Innings = cleanInnings(player1.innings);
+    const cleanedP2Innings = cleanInnings(player2.innings);
 
-        // --- DETERMINE MATCH WINNER ---
-        if (p1tot > p2tot) {
-            matchdata.winner = matchdata.player1.name;
-        } else if (p2tot > p1tot) {
-            matchdata.winner = matchdata.player2.name;
-        } else {
-            matchdata.winner = "Draw";
-        }
+    // Calculate Total Runs
+    const p1TotalRuns = cleanedP1Innings.reduce((sum, inn) => sum + inn.runs, 0);
+    const p2TotalRuns = cleanedP2Innings.reduce((sum, inn) => sum + inn.runs, 0);
 
-        // --- DATABASE SAVE ---
-        // Create a new MongoDB document using the processed data
-        const newMatch = await matchModel.create(matchdata);
+    // Determine Winner automatically
+    let matchWinner = "Draw";
+    if (p1TotalRuns > p2TotalRuns) matchWinner = player1.name;
+    if (p2TotalRuns > p1TotalRuns) matchWinner = player2.name;
 
-        // Send a 201 (Created) status code back to the client upon success
-        res.status(201).json({
-            message: "Match saved successfully!",
-            match: newMatch
-        });
-    } catch (e) {
-        // Catch and handle any server or database errors
-        res.status(500).send({
-            msg: "Internal Server Error",
-            error: e.message
-        });
-    }
+    // Create the final match object matching your Schema perfectly
+    const newMatch = new matchModel({
+      format: format,
+      player1: { 
+        name: player1.name, 
+        innings: cleanedP1Innings, 
+        totalRuns: p1TotalRuns 
+      },
+      player2: { 
+        name: player2.name, 
+        innings: cleanedP2Innings, 
+        totalRuns: p2TotalRuns 
+      },
+      winner: matchWinner
+    });
+
+    // Save to MongoDB
+    await newMatch.save();
+    
+    // Send success back to Frontend
+    res.status(200).json({ message: "Match saved successfully!", match: newMatch });
+
+  } catch (error) {
+    console.error("🔥 POST ROUTE CRASHED:", error); // This will show in Render logs!
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
 });
 
 /**
